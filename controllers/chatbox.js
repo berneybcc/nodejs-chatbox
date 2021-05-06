@@ -1,5 +1,8 @@
 var QuestionsModel = require('../models/questions');
 
+function adminQuestion(req,res){
+    res.render('adminQuestions');
+}
 function obtainQuestion(req, res){ 
     QuestionsModel.find(function(err,question){
         question.forEach((data)=>{
@@ -28,16 +31,8 @@ async function obtainRelationQuestion(req,res){
     var ids = req.params.ids;
     var valueRelation = [];
     if (typeof ids !== "undefined") {
-        console.log(ids);
-        var infoSearch = await obtainOneQuestion(ids);
-        if(!infoSearch.error){
-            console.log(infoSearch);
-            var data = infoSearch.data;
-            var idInfo = data.id;
-            var relationInfo = data.relation;
-            relationInfo.push(idInfo);
-            valueRelation = relationInfo;
-        }
+        var dataRelation = this.obtainRelation(ids);
+        valueRelation = (!dataRelation.error)?dataRelation.data:[];
         console.log(valueRelation);
     }
     QuestionsModel.find({relation:valueRelation},function(error,data){
@@ -55,15 +50,39 @@ async function obtainRelationQuestion(req,res){
 }
 
 function saveQuestion(req,res){
-    var questionsQuery= new QuestionsModel({num:1,description:"CAJA",relation:[]});
+    var data = req.body;
+    console.log(data);
+    var valueDescription = data.inputDescripcion;
+    var valueRelation = [];
+    if(typeof data.flexRadioDefault !== "undefined"){
+        var dataRelation = this.obtainRelation(ids);
+        valueRelation = (!dataRelation.error)?dataRelation.data:[];
+    }
+    var questionsQuery= new QuestionsModel({description:valueDescription,relation:valueRelation});
     questionsQuery.save();
     return res.send("Dato insertado");
 }
+
+async function obtainRelation(ids){
+    var dataReturn ={error:true};
+    var infoSearch = await obtainOneQuestion(ids);
+    if(!infoSearch.error){
+        console.log(infoSearch);
+        var data = infoSearch.data;
+        var idInfo = data.id;
+        var relationInfo = data.relation;
+        relationInfo.push(idInfo);
+        dataReturn.error = false;
+        dataReturn.data = relationInfo;
+    }
+    return dataReturn;
+} 
 
 module.exports={
     obtainQuestion,
     saveQuestion,
     obtainOneQuestion,
-    obtainRelationQuestion
+    obtainRelationQuestion,
+    adminQuestion
 };
   

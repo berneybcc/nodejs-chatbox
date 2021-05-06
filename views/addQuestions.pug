@@ -1,0 +1,27 @@
+extends layout
+
+block content
+  <div class="container">
+    <div class="row">
+      <div class="col">
+        <h1 class="display-2 mb-4">Preguntas</h1>
+      </div>
+    </div>
+    <form action="/chatbox/questions/save" method="POST" id="from-admin">
+        <div class="row">
+            <div class="card p-4 m-1 col-sm">
+                <h1 class="display-5 mb-2">Agregar Pregunta</h1>
+                <div class="mb-3">
+                <label for="inputDescripcion" class="form-label">Descripcion</label>
+                <input type="text" class="form-control" id="inputDescripcion" placeholder="Ingresar descripcion" name="inputDescripcion" required>
+                </div>
+                <div>
+                <button type="submit" class="btn btn-success">Agregar</button>
+                </div>
+            </div>
+            <div class="card p-4 m-1 col-sm">
+                block viewQuestions
+            </div>
+        </div>
+    </form>
+  </div>
