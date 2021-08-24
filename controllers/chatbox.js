@@ -1,5 +1,81 @@
-const { restart } = require('nodemon');
 var QuestionsModel = require('../models/questions');
+var WebhookModel = require('../models/webhook');
+var config = require('../config');
+var request = require('request');
+
+
+function webhookGet(req,res){
+    let mode = req.query['hub.mode'];
+    let token = req.query['hub.verify_token'];
+    let challenge = req.query['hub.challenge'];
+
+    if (mode && token) {
+        if (mode === 'subscribe' && token === config.TOKEN_FACEBOOK) {
+          console.log('WEBHOOK_VERIFIED');
+          res.status(200).send(challenge);
+        } else {
+          res.sendStatus(403);      
+        }
+    }
+}
+
+function webhookPost(req,res){
+    let body = req.body;
+    console.log(    );
+    if (body.object === 'page') {
+        saveWebhook(body);
+        body.entry.forEach(function(entry) {
+            let webhook_event = entry.messaging;
+            // console.log(webhook_event);
+            webhook_event.forEach((mess)=>{
+                // console.log(mess);
+                var inforeipinet = receiveMessage(mess);
+            })
+            res.status(200).send("llego");
+        });
+    } else {
+        res.sendStatus(404);
+    }
+}
+
+function receiveMessage(event){
+    console.log(event.sender.id);
+    console.log(event.message.text);
+    sendMessage(event.sender.id);
+}
+
+function sendMessage(id){
+    callSendApi({
+        recipient: {
+            id: id
+        },
+        message: {
+            text: "Hola, te saludo. Yo el Webhook"
+        }
+    });
+}
+
+
+async function saveWebhook(info){
+    var webhookQuery= new WebhookModel({event:info,date:new Date});
+    await webhookQuery.save();
+}
+
+async function callSendApi(message){
+    request({
+        uri:config.URI_FACEBOOK,
+        qs:{ access_token : config.TOKEN_FACEBOOK},
+        method:"POST",
+        json:message
+    },function(error,response,data){
+        if(error){
+            console.log("Error al enviar datos.");
+        }else{
+            console.log("Envia datos");
+        }
+    }
+    )
+}
 
 async function adminQuestion(req,res){
     var data = await obtainQuestion([]);
@@ -15,62 +91,6 @@ async function adminQuestion(req,res){
 
 function testButton(){
     console.log("butom");
-}
-
-async function createArrayQuestion(data){
-    var returnDatos=[];
-    for(var i=0;i<data.length;i++){
-        var uid= data[i].id;
-        var datosObject={};
-        datosObject[uid]=[];
-        datosObject.id=uid;
-        datosObject.description = data[i].description;
-        var infoOne = await obtainQuestion([uid]);
-        if(!infoOne.error){
-            var oneLevel= infoOne.data;            
-            for(var a=0;a<oneLevel.length;a++){
-                var uidOne= oneLevel[a].id;
-                var datosOneObject={};
-                datosOneObject[uidOne]=[];
-                datosOneObject.id=uidOne;
-                datosOneObject.description = oneLevel[a].description;
-                datosObject[uid].push(datosOneObject);
-                var infoTwo = await obtainQuestion([uid,uidOne]);
-                if(!infoTwo.error){
-                    datosObject[uid][a][uidOne].push(infoTwo.data);
-                }
-            }
-        }
-        // var info = await obtainQuestionLikeRelation(uid);
-        // if(!info.error){
-        //     var subData = info.data;
-        //     for(var a=0;a<subData.length;a++){
-        //         var uidSub=subData[a].id;
-        //         var datosSub={};
-        //         datosSub.id=uidSub;
-        //         datosSub.description=subData[a].description;
-        //         var relation =subData[a].relation;
-        //         uid_end= relation[relation.length-1];
-        //         if(typeof datosObject[uid_end]!== 'undefined'){
-        //             datosObject[uid_end].push(datosSub);
-        //         }
-        //         else{
-        //             if(datosObject[uid].length > 0){
-        //                 for(var c=0;c<datosObject[uid].length;c++){
-        //                     if(relation.indexOf(datosObject[uid][c].id)>=0){
-        //                         if(typeof datosObject[uid][c][datosObject[uid][c].id] === 'undefined'){
-        //                             datosObject[uid][c][datosObject[uid][c].id]=[];
-        //                         }                                
-        //                         datosObject[uid][c][datosObject[uid][c].id].push(datosSub);
-        //                     };
-        //                 }
-        //             }
-        //         }                
-        //     }
-        // }
-        returnDatos.push(datosObject);
-    }
-    return returnDatos;
 }
 
 function obtainQuestionLikeRelation(id){
@@ -141,7 +161,7 @@ async function saveQuestion(req,res){
     var data = req.body;
     var valueDescription = data.inputDescripcion;
     var valueRelation = [];
-    if(typeof data.checkQuestions !== "undefined"){
+    if(typeof data.checkQuestions !== "undefined" && data.checkQuestions){
         console.log(data.checkQuestions);
         var dataRelation =await obtainRelation(data.checkQuestions);
         if(!dataRelation.error){
@@ -165,6 +185,53 @@ async function saveQuestion(req,res){
     return res.send(returnInfo);
 }
 
+async function updateQuestion(req,res){
+    console.log('Ingresa Update');
+    var returnInfo={
+        error:false,
+        data:"Registro Actualizado"
+    };
+    try {
+        var data = req.body;
+        var uid =data.uid;
+        var valueDescription = data.inputDescripcion;
+        var responseQuery = await QuestionsModel.updateOne({_id:uid},{description:valueDescription});
+        if(responseQuery.nModified===0){
+            returnInfo.error=true;
+            returnInfo.data="No existe el id enviado";
+        }
+        return res.send(returnInfo);
+    } catch (error) {
+        returnInfo.error=true;
+        returnInfo.data="Error al realizar la actualizacion";
+        return res.send(returnInfo);
+    }
+}
+
+async function deleteQuestion(req,res){
+    console.log('Ingresa Delete');
+    var returnInfo={
+        error:false,
+        data:"Registro Eliminado"
+    };
+    try {
+        var data = req.body;
+        var uid =data.uid;
+        var valueDescription = data.inputDescripcion;
+        var responseQuery = await QuestionsModel.deleteOne({_id:uid});
+        console.log(responseQuery);
+        if(responseQuery.nModified===0){
+            returnInfo.error=true;
+            returnInfo.data="No existe el id enviado";
+        }
+        return res.send(returnInfo);
+    } catch (error) {
+        returnInfo.error=true;
+        returnInfo.data="Error al eliminar registro";
+        return res.send(returnInfo);
+    }
+}
+
 async function obtainRelation(ids){
     var dataReturn ={error:true};
     var infoSearch = await obtainOneQuestion(ids);
@@ -185,6 +252,10 @@ module.exports={
     saveQuestion,
     obtainOneQuestion,
     obtainRelationQuestion,
-    adminQuestion
+    adminQuestion,
+    updateQuestion,
+    deleteQuestion,
+    webhookGet,
+    webhookPost
 };
   

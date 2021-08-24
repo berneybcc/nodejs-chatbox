@@ -1,0 +1,4 @@
+module.exports={
+    TOKEN_FACEBOOK :"EAAIXyZAA7ZCsQBAFZCffZBULrZBqAKfNVySZBqhK84I1isP5LpXlOiWp0C2glyYsox0B6EEFsL7JWAlEw2glDhZARyDQfgMUlf3t4Jy4AZBbnhyGBE04SJOf2f5wbIcyMM1qVYnDIH2jd8OSGGoEv9lYT7sHPhVXdvK6sIyYofJZAJ0pSv8QdBZCGZBBoxMZAiunV5wZD",
+    URI_FACEBOOK:"https://graph.facebook.com/v11.0/me/messages"
+}
