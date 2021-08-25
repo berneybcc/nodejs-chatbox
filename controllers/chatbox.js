@@ -50,7 +50,20 @@ function sendMessage(id){
             id: id
         },
         message: {
-            text: "Hola, te saludo. Yo el Webhook"
+            "text": "Pick a color:",
+            "quick_replies":[
+            {
+                "content_type":"text",
+                "title":"Red",
+                "payload":"<POSTBACK_PAYLOAD>",
+                "image_url":"http://example.com/img/red.png"
+            },{
+                "content_type":"text",
+                "title":"Green",
+                "payload":"<POSTBACK_PAYLOAD>",
+                "image_url":"http://example.com/img/green.png"
+            }
+            ]
         }
     });
 }
@@ -68,6 +81,9 @@ async function callSendApi(message){
         method:"POST",
         json:message
     },function(error,response,data){
+        // console.log(response);
+        // console.log(error);
+        // console.log(data);
         if(error){
             console.log("Error al enviar datos.");
         }else{
