@@ -1,5 +1,6 @@
 var QuestionsModel = require('../models/questions');
 var WebhookModel = require('../models/webhook');
+var ReportModel = require('../models/report');
 var config = require('../config');
 var request = require('request');
 
@@ -38,40 +39,36 @@ function webhookPost(req,res){
     }
 }
 
-function receiveMessage(event){
+async function receiveMessage(event){
     console.log(event.sender.id);
     console.log(event.message.text);
-    sendMessage(event.sender.id);
+    var data = await captureTextUser(event.message.text,event.sender.id);
+    sendMessage(event.sender.id,data);
 }
 
-function sendMessage(id){
+function sendMessage(id,arrayInfo){
+    var responseUser=[];
+
+    if(!arrayInfo.error){
+        arrayInfo.data.forEach(elemento=>{
+            var textUser = {
+                content_type:"text",
+                title:elemento.description,
+                payload:"<POSTBACK_PAYLOAD>"
+            };
+            responseUser.push(textUser);
+        })
+    }
+    console.log(responseUser);
     callSendApi({
         recipient: {
             id: id
         },
         message: {
-            "text": "Pick a color:",
-            "quick_replies":[
-            {
-                "content_type":"text",
-                "title":"Red",
-                "payload":"<POSTBACK_PAYLOAD>",
-                "image_url":"http://example.com/img/red.png"
-            },{
-                "content_type":"text",
-                "title":"Green",
-                "payload":"<POSTBACK_PAYLOAD>",
-                "image_url":"http://example.com/img/green.png"
-            }
-            ]
+            text: "Seleccionar Opcion",
+            quick_replies:responseUser
         }
     });
-}
-
-
-async function saveWebhook(info){
-    var webhookQuery= new WebhookModel({event:info,date:new Date});
-    await webhookQuery.save();
 }
 
 async function callSendApi(message){
@@ -81,9 +78,6 @@ async function callSendApi(message){
         method:"POST",
         json:message
     },function(error,response,data){
-        // console.log(response);
-        // console.log(error);
-        // console.log(data);
         if(error){
             console.log("Error al enviar datos.");
         }else{
@@ -93,6 +87,25 @@ async function callSendApi(message){
     )
 }
 
+async function captureTextUser(texto,id){
+    var questionDescription = await obtainQuestionDescription(texto);
+    var valueRelation = [];
+    var ids = "Uid_Inicio";
+    var description = texto;
+    if (!questionDescription.error) {
+        description = questionDescription.data.description;
+        ids = questionDescription.data.id;
+        var dataRelation = await obtainRelation(ids);
+        valueRelation = (!dataRelation.error)?dataRelation.data:[];
+    }
+    await saveReport(id,ids,description);
+    var infoEnd = await obtainQuestion(valueRelation);
+    if(infoEnd.error){
+        infoEnd = await obtainQuestion([]);
+    }
+    return infoEnd;
+}
+
 async function adminQuestion(req,res){
     var data = await obtainQuestion([]);
     if(!data.error){
@@ -100,13 +113,7 @@ async function adminQuestion(req,res){
         console.log("Consulta Sub Questions");
         // var subData= await createArrayQuestion(data);
     }
-    // console.log(subData);
-    // res.send(subData);
     res.render('adminQuestions',{info:data});
-}
-
-function testButton(){
-    console.log("butom");
 }
 
 function obtainQuestionLikeRelation(id){
@@ -119,6 +126,24 @@ function obtainQuestionLikeRelation(id){
             msg.error = true;
             msg.data = "No existe Registro para el id enviado";
             // console.log(msg);
+        }
+        resutl(msg);
+    })});
+}
+
+function obtainQuestionDescription(texto){
+    texto = texto.match(/[A-Za-z0-9 ]/g);
+    texto = texto.join("");
+    console.log("TExto finall !!!!!! "+texto);
+    return new Promise((resutl) => {QuestionsModel.findOne({description:{$regex:`.*${texto}.*`}},function(error,data){
+        var msg = {
+            error:false,
+            data:data
+        }
+        if(error || !data){
+            console.log(error);
+            msg.error = true;
+            msg.data = "No existe Registro para el id enviado";
         }
         resutl(msg);
     })});
@@ -199,6 +224,16 @@ async function saveQuestion(req,res){
     var questionsQuery= new QuestionsModel({description:valueDescription,relation:valueRelation});
     await questionsQuery.save();
     return res.send(returnInfo);
+}
+
+async function saveWebhook(info){
+    var webhookQuery= new WebhookModel({event:info,date:new Date});
+    await webhookQuery.save();
+}
+
+async function saveReport(id,uid,description){
+    var reportQuery= new ReportModel({id_user:id,uid_question:uid,description_question:description,date:new Date});
+    await reportQuery.save();
 }
 
 async function updateQuestion(req,res){
