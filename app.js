@@ -8,6 +8,8 @@ var indexRouter = require('./routes/index');
 var routerRouter= require('./routes/router');
 var cors = require('cors')
 var app = express();
+var cron  = require('node-cron');
+var cronTareas = require('./controllers/cronTarea');
 
 
 // view engine setup
@@ -21,7 +23,9 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', indexRouter);
 app.use('/chatbox', routerRouter);
-//Conexion a mongodb
+
+// cron.schedule('* * * * *',cronTareas.reportData);
+//Conexion a mong odb
 connDatabase;
  
 // catch 404 and forward to error handler

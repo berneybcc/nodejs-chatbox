@@ -2,6 +2,8 @@ var express = require('express');
 var router = express.Router();
 var cors = require('cors')
 var ChatboxController = require('../controllers/chatbox');
+var CronTareasController = require('../controllers/cronTarea');
+
 
 var corsOptions = {
   origin: '*',
@@ -14,6 +16,8 @@ router.post('/questions/delete',cors(corsOptions),ChatboxController.deleteQuesti
 router.get('/questions/relation',ChatboxController.obtainRelationQuestion);
 router.get('/questions/obtain/:ids?',cors(corsOptions),ChatboxController.obtainRelationQuestion);
 router.get('/admin/questions',ChatboxController.adminQuestion);
+router.get('/report',CronTareasController.reportData);
+router.get('/report/charts',cors(corsOptions),CronTareasController.infoCharts);
 
 /* GET users listing. */
 
