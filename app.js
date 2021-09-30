@@ -24,7 +24,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', indexRouter);
 app.use('/chatbox', routerRouter);
 
-// cron.schedule('* * * * *',cronTareas.reportData);
+cron.schedule('59 23 28 * *',cronTareas.reportData);
 //Conexion a mong odb
 connDatabase;
  

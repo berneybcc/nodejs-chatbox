@@ -5,16 +5,22 @@ var moment = require('moment'); // require
 
 async function reportData(req,res) {
     console.log('Informe');
-    var fecha = moment().add(-1,'months').format('YYYY-MM-DD');
-    var datos = await obtainReport(fecha);
-    var report_end = realizarInforme(datos);
-    await saveCharts(report_end);
-    return res.send(report_end);
+    return res.send(await buildInfoReport());
 }
 
 async function infoCharts(req,res){
-   var infoData = await obtainCharts();
-   return res.send(infoData);
+    // await buildInfoReport();
+    var infoData = await obtainCharts();
+    return res.send(infoData);
+}
+
+async function buildInfoReport(){
+    var fecha = moment().add(-1,'months').format('YYYY-MM-DD');
+    console.log(fecha);
+    var datos = await obtainReport(fecha);
+    var report_end = realizarInforme(datos);
+    await deleteCharts();
+    return await saveCharts(report_end);
 }
 
 function obtainReport(fecha){
@@ -74,6 +80,10 @@ async function saveCharts(info){
         })
         response("Reporte Guardado");
     })
+}
+
+async function deleteCharts(){
+    return await ChartsModel.deleteMany({});
 }
 
 function obtainCharts(){
