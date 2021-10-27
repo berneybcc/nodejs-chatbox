@@ -50,6 +50,10 @@ function realizarInforme(info){
         var datos_element = []; 
         info.forEach((element)=>{
             var descrip= element.description_question;
+            console.log(element);
+            if(element.uid_question ==="Uid_Inicio"){
+                descrip ="Saludo Inicial";
+            }
             datos_element.push(descrip)
         })
         report_start =  datos_element.filter( (ele,pos)=>datos_element.indexOf(ele) == pos);
