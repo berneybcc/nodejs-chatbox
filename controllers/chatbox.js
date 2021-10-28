@@ -22,7 +22,6 @@ function webhookGet(req,res){
 
 function webhookPost(req,res){
     let body = req.body;
-    console.log(    );
     if (body.object === 'page') {
         saveWebhook(body);
         body.entry.forEach(function(entry) {
@@ -40,9 +39,13 @@ function webhookPost(req,res){
 }
 
 async function receiveMessage(event){
-    console.log(event.sender.id);
-    console.log(event.message.text);
-    var data = await captureTextUser(event.message.text,event.sender.id);
+    var textoBox= "";
+    if(typeof event.message != "undefined"){
+        textoBox = event.message.text;
+    }else if(typeof event.postback != "undefined"){
+        textoBox = event.postback.title;
+    }
+    var data = await captureTextUser(textoBox,event.sender.id);
     sendMessage(event.sender.id,data);
 }
 
@@ -52,21 +55,31 @@ function sendMessage(id,arrayInfo){
     if(!arrayInfo.error){
         arrayInfo.data.forEach(elemento=>{
             var textUser = {
-                content_type:"text",
+                type:"postback",
                 title:elemento.description,
-                payload:"<POSTBACK_PAYLOAD>"
+                payload:"DEVELOPER_DEFINED_PAYLOAD"
             };
             responseUser.push(textUser);
         })
     }
-    console.log(responseUser);
     callSendApi({
         recipient: {
             id: id
         },
         message: {
-            text: "Seleccionar Opcion",
-            quick_replies:responseUser
+            attachment:{
+                type:"template",
+                payload:{
+                  template_type:"generic",
+                  elements:[
+                     {
+                      title:arrayInfo.msgbox,
+                      subtitle: config.SUB_MEG,
+                      buttons:responseUser
+                    }
+                  ]
+                }
+            }
         }
     });
 }
@@ -78,7 +91,8 @@ async function callSendApi(message){
         method:"POST",
         json:message
     },function(error,response,data){
-        if(error){
+        console.log(data.error);
+        if(data.error){
             console.log("Error al enviar datos.");
         }else{
             console.log("Envia datos");
@@ -89,6 +103,7 @@ async function callSendApi(message){
 
 async function captureTextUser(texto,id){
     var questionDescription = await obtainQuestionDescription(texto);
+    
     var valueRelation = [];
     var ids = "Uid_Inicio";
     var description = texto;
@@ -103,6 +118,11 @@ async function captureTextUser(texto,id){
     if(infoEnd.error){
         infoEnd = await obtainQuestion([]);
     }
+    infoEnd.msgbox= config.MEG_SELECCION;
+    if(valueRelation.length==0){
+        infoEnd.msgbox = config.MEG_WELCOME;
+    }
+    console.log(infoEnd);
     return infoEnd;
 }
 
@@ -134,7 +154,7 @@ function obtainQuestionLikeRelation(id){
 function obtainQuestionDescription(texto){
     texto = texto.match(/[A-Za-z0-9 ]/g);
     texto = texto.join("");
-    console.log("TExto finall !!!!!! "+texto);
+    console.log("Texto final: "+texto);
     return new Promise((resutl) => {QuestionsModel.findOne({description:{$regex:`.*${texto}.*`}},function(error,data){
         var msg = {
             error:false,
