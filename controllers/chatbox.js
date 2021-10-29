@@ -54,11 +54,18 @@ function sendMessage(id,arrayInfo){
 
     if(!arrayInfo.error){
         arrayInfo.data.forEach(elemento=>{
-            var textUser = {
-                type:"postback",
-                title:elemento.description,
-                payload:"DEVELOPER_DEFINED_PAYLOAD"
-            };
+            var textUser = {};
+            if(!validarURL(elemento.description)){
+                textUser.type="postback";
+                textUser.title=elemento.description
+                textUser.payload="DEVELOPER_DEFINED_PAYLOAD";
+            }else{
+                arrayInfo.msgbox.title = config.MEG_BYE;
+                arrayInfo.msgbox.subtitle = config.SUB_MEG_BYE;  
+                textUser.type="web_url";
+                textUser.url=elemento.description;
+                textUser.title="Más Información";
+            }
             responseUser.push(textUser);
         })
     }
@@ -73,8 +80,8 @@ function sendMessage(id,arrayInfo){
                   template_type:"generic",
                   elements:[
                      {
-                      title:arrayInfo.msgbox,
-                      subtitle: config.SUB_MEG,
+                      title:arrayInfo.msgbox.title,
+                      subtitle: arrayInfo.msgbox.subtitle ,
                       buttons:responseUser
                     }
                   ]
@@ -118,9 +125,11 @@ async function captureTextUser(texto,id){
     if(infoEnd.error){
         infoEnd = await obtainQuestion([]);
     }
-    infoEnd.msgbox= config.MEG_SELECCION;
+    infoEnd.msgbox = {};
+    infoEnd.msgbox.title = config.MEG_SELECCION;
+    infoEnd.msgbox.subtitle = config.SUB_MEG;
     if(valueRelation.length==0){
-        infoEnd.msgbox = config.MEG_WELCOME;
+        infoEnd.msgbox.title = config.MEG_WELCOME;
     }
     console.log(infoEnd);
     return infoEnd;
@@ -201,16 +210,7 @@ function obtainOneQuestion(id){
 
 async function obtainRelationQuestion(req,res){
     var ids = req.params.ids;
-    var valueRelation = [];
-    console.log(ids);
-    if (typeof ids !== "undefined") {
-        var dataRelation = await obtainRelation(ids);
-        valueRelation = (!dataRelation.error)?dataRelation.data:[];
-    }
-    console.log("Valor Array: "+valueRelation);
-    var info =await obtainQuestion(valueRelation);
-    console.log(info);
-    res.send(info);
+    res.send(await obtainInfoByRelation(ids));
 }
 
 async function saveQuestion(req,res){
@@ -222,7 +222,22 @@ async function saveQuestion(req,res){
     var data = req.body;
     var valueDescription = data.inputDescripcion;
     var valueRelation = [];
+
     if(typeof data.checkQuestions !== "undefined" && data.checkQuestions){
+        var infoValid= await obtainInfoByRelation(data.checkQuestions);
+        if(!infoValid.error){
+            if(validarURL(valueDescription)){
+                returnInfo.error = true;
+                returnInfo.data = config.ERROR.URL_NO_PERTENECE;
+                return res.send(returnInfo);
+            }
+            var validarInfo=await validQuestionNotURL(infoValid);
+            if(validarInfo){
+                returnInfo.error = true;
+                returnInfo.data = config.ERROR.URL_EXISTE;
+                return res.send(returnInfo);
+            }
+        }
         console.log(data.checkQuestions);
         var dataRelation =await obtainRelation(data.checkQuestions);
         if(!dataRelation.error){
@@ -318,6 +333,32 @@ async function obtainRelation(ids){
     }
     return dataReturn;
 } 
+
+async function obtainInfoByRelation(ids){
+    var valueRelation = [];
+    console.log(ids);
+    if (typeof ids !== "undefined") {
+        var dataRelation = await obtainRelation(ids);
+        valueRelation = (!dataRelation.error)?dataRelation.data:[];
+    }
+    return await obtainQuestion(valueRelation);
+}
+
+async function validQuestionNotURL(info){
+    var validTexto = false;
+    if(!info.error){
+        info.data.forEach(function(element) {
+            if(validarURL(element.description)){
+                validTexto = true;
+            }
+        })
+    }
+    return validTexto;
+} 
+
+function validarURL(str) {
+    return /^(?:(?:(?:https?|ftp):)?\/\/)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)(?:\.(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)*(?:\.(?:[a-z\u00a1-\uffff]{2,})))(?::\d{2,5})?(?:[/?#]\S*)?$/i.test(str);
+}
 
 module.exports={
     saveQuestion,
