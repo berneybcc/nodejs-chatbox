@@ -255,7 +255,13 @@ async function saveQuestion(req,res){
         returnInfo.data = "Se requiere una Descripcion";
         return res.send(returnInfo);
     }
-
+    if(valueRelation.length==0){
+        if(validarURL(valueDescription)){
+            returnInfo.error = true;
+            returnInfo.data = config.ERROR.URL_NO_PERTENECE;
+            return res.send(returnInfo);
+        }
+    }
     var questionsQuery= new QuestionsModel({description:valueDescription,relation:valueRelation});
     await questionsQuery.save();
     return res.send(returnInfo);
