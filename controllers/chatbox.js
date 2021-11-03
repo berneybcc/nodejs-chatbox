@@ -161,8 +161,8 @@ function obtainQuestionLikeRelation(id){
 }
 
 function obtainQuestionDescription(texto){
-    texto = texto.match(/[A-Za-z0-9 ]/g);
-    texto = texto.join("");
+    // texto = texto.match(/[A-Za-z0-9 ]/g);
+    // texto = texto.join("");
     console.log("Texto final: "+texto);
     return new Promise((resutl) => {QuestionsModel.findOne({description:{$regex:`.*${texto}.*`}},function(error,data){
         var msg = {
